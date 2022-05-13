@@ -8,12 +8,18 @@ Created on Fri Mar 25 17:43:59 2022
 
 import os
 import pathlib
-
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
-#tensorflow utilities
+# wav file prrocessing 
+'''
+process into 3 sec interval to crowd data and save as respective files
+
+'''
+from pydub import AudioSegment
+
+# tensorflow utilities
 import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras import models
@@ -24,16 +30,17 @@ from sklearn import datasets
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, classification_report
 
-#%%
+#%%Create Train Test Valid Data
 
-#locate the intended folder of soundfiles
-DATASET_PATH = '/Users/stevenodriscoll/Documents/Senior Spring 2022/Machine Learning/Project/15dB'
+# locate the intended folder of soundfiles
+DATASET_PATH = '/Users/stevenodriscoll/Documents/Senior Spring 2022/Machine Learning/Project/Conversation_Data/'
+
 #secure pathway
 data_dir = pathlib.Path(DATASET_PATH)
 
-#folder names 
-folder_commands = np.array(tf.io.gfile.listdir(str(data_dir)))
-commands = np.delete(folder_commands,2)
+# folder names 
+commands = np.array(tf.io.gfile.listdir(str(data_dir)))
+commands = np.delete(commands,1)
 print('Commands:', commands)
 
 
@@ -49,14 +56,25 @@ print('Number of examples per label:',
 print('Example file tensor:', filenames[0])
 
 #split the dataset into training and test
-#85% of data set
-train_files = filenames[:179]
-val_files = filenames[180:180+10]
+
+#%%Old Data
+#80% of data set
+train_files = filenames[:200]
 #10% of data set
-test_files = filenames[-20:]
+val_files = filenames[201:201+10]
+#10% of data set
+test_files = filenames[-50:]
+#%%New Data
+# #80% of data set
+# train_files = filenames[:528]
+# #10% of data set
+# val_files = filenames[529:529+66]
+# #10% of data set
+# test_files = filenames[-67:]
+#%%
 
 print('Training set size', len(train_files))
-#print('Validation set size', len(val_files))
+print('Validation set size', len(val_files))
 print('Test set size', len(test_files))
 
 
@@ -93,9 +111,9 @@ def get_spectrogram(waveform):
   input_len = 16000
   waveform = waveform[:input_len]
   zero_padding = tf.zeros(
-      [16000] - tf.shape(waveform),
-      dtype=tf.float32)
-  # Cast the waveform tensors' dtype to float32.
+       [16000] - tf.shape(waveform),
+       dtype=tf.float32)
+  #Cast the waveform tensors' dtype to float32.
   waveform = tf.cast(waveform, dtype=tf.float32)
   # Concatenate the waveform with `zero_padding`, which ensures all audio
   # clips are of the same length.
@@ -148,22 +166,22 @@ waveform_ds = files_ds.map(
 
 #%%plot the wave file
 
-# rows = 3
-# cols = 3
-# n = rows * cols
-# fig, axes = plt.subplots(rows, cols, figsize=(10, 12))
-# plt.tight_layout()
+rows = 3
+cols = 3
+n = rows * cols
+fig, axes = plt.subplots(rows, cols, figsize=(10, 12))
+plt.tight_layout()
 
-# for i, (audio, label) in enumerate(waveform_ds.take(n)):
-#   r = i // cols
-#   c = i % cols
-#   ax = axes[r][c]
-#   ax.plot(audio.numpy())
-#   ax.set_yticks(np.arange(-1.2, 1.2, 0.2))
-#   label = label.numpy().decode('utf-8')
-#   ax.set_title(label)
+for i, (audio, label) in enumerate(waveform_ds.take(n)):
+  r = i // cols
+  c = i % cols
+  ax = axes[r][c]
+  ax.plot(audio.numpy())
+  ax.set_yticks(np.arange(-1.2, 1.2, 0.2))
+  label = label.numpy().decode('utf-8')
+  ax.set_title(label)
 
-# plt.show()
+plt.show()
 
 #%%
 
@@ -178,15 +196,15 @@ print('Spectrogram shape:', spectrogram.shape)
 #display.display(display.Audio(waveform, rate=16000))
 
 #%%plot waveform as a spectrogram
-# fig, axes = plt.subplots(2, figsize=(12, 8))
-# timescale = np.arange(waveform.shape[0])
-# axes[0].plot(timescale, waveform.numpy())
-# axes[0].set_title('Waveform')
-# axes[0].set_xlim([0, 16000])
+fig, axes = plt.subplots(2, figsize=(12, 8))
+timescale = np.arange(waveform.shape[0])
+axes[0].plot(timescale, waveform.numpy())
+axes[0].set_title(f'Waveform {label}')
+axes[0].set_xlim([0, 16000])
 
-# plot_spectrogram(spectrogram.numpy(), axes[1])
-# axes[1].set_title('Spectrogram')
-# plt.show()
+plot_spectrogram(spectrogram.numpy(), axes[1])
+axes[1].set_title('Spectrogram')
+plt.show()
 
 #%%Plotac
 
@@ -194,20 +212,20 @@ spectrogram_ds = waveform_ds.map(map_func = get_spectrogram_and_label_id,num_par
 
 
 #%%
-# rows = 4
-# cols = 4
-# n = rows*cols
-# fig, axes = plt.subplots(rows, cols, figsize=(10, 10))
+rows = 3
+cols = 3
+n = rows*cols
+fig, axes = plt.subplots(rows, cols, figsize=(10, 10))
 
-# for i, (spectrogram, label_id) in enumerate(spectrogram_ds.take(n)):
-#   r = i // cols
-#   c = i % cols
-#   ax = axes[r][c]
-#   plot_spectrogram(spectrogram.numpy(), ax)
-#   ax.set_title(commands[label_id.numpy()])
-#   ax.axis('off')
+for i, (spectrogram, label_id) in enumerate(spectrogram_ds.take(n)):
+  r = i // cols
+  c = i % cols
+  ax = axes[r][c]
+  plot_spectrogram(spectrogram.numpy(), ax)
+  ax.set_title(commands[label_id.numpy()])
+  ax.axis('off')
 
-# plt.show()
+plt.show()
 
 #%%
 
